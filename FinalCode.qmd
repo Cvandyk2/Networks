@@ -20,11 +20,15 @@ library(ggpubr)
 #### load data####
 
 nodes <- read.csv("~/Desktop/GraduateSchool/S4/Network/FinalProj/GovNodes.csv")
-edges <- read.csv("~/Desktop/GraduateSchool/S4/Network/FinalProj/GovEges.csv")
+edges <- read.csv("~/Desktop/GraduateSchool/S4/Network/FinalProj/GovEdges.csv")
 
 edges <- rename(edges, Relationship = "Relationship..which.includes.neutral.or.adversary.classifications.")
+nodes$GDP..USD.billion. <- gsub(",", "", nodes$GDP..USD.billion.)
+nodes$GDP..USD.billion. <- gsub("\\$", "", nodes$GDP..USD.billion.)
+nodes$GDP..USD.billion. <- as.numeric(nodes$GDP..USD.billion.)
 
-set.seed(69420)
+
+set.seed(420)
 
 ```
 
@@ -40,7 +44,7 @@ ggraph(net) +
 
 + nodes
 ```{r}
-net2 <- igraph::add_vertices(net, nv = 4) #add 4 vertices
+net2 <- igraph::add_vertices(net, nv = 1) #add 4 vertices
 net2
 ggraph(net2) +
   geom_edge_link(color = "black", alpha = 0.3) +
@@ -50,7 +54,7 @@ ggraph(net2) +
 
 + edges
 ```{r}
-net3 <- igraph::add_edges(net2, c(sample(V(net2), 4),sample(V(net2), 4))) #add edges, randomly
+net3 <- igraph::add_edges(net2, c(sample(V(net2), 8),sample(V(net2), 8))) #add edges, randomly
 net3
 # add_edges(net2, c(1,5, 10,12, 20,21, 50,54)) #connect pairs of nodes in sequence
 ggraph(net3) +
@@ -61,7 +65,7 @@ ggraph(net3) +
 
 - edges
 ```{r}
-net4 <- igraph::delete_edges(net3, c(sample(E(net3), 3))) #delete 3 edges from the list at random
+net4 <- igraph::delete_edges(net3, c(sample(E(net3), 5))) #delete 3 edges from the list at random
 net4
 # delete_edges(net5, c(24, 56, 90, 102)) #delete edges, edge sequence
 ggraph(net4) +
@@ -72,7 +76,7 @@ ggraph(net4) +
 
 - nodes
 ```{r}
-net5 <- igraph::delete_vertices(net4, c(sample(length(nodes$ego_id), 3))) #delete nodes, randomly
+net5 <- igraph::delete_vertices(net4, c(sample(length(nodes$ego_id), 2))) #delete nodes, randomly
 # delete_vertices(net4, c(1, 12, 24, 55)) #delete nodes, node sequence
 net5
 ggraph(net5) +
@@ -83,7 +87,7 @@ ggraph(net5) +
 
 
 ```{r}
-net6 <- igraph::rewire(net5, each_edge(p = .15, loops = F)) #15% chance of each edge being rewired
+net6 <- igraph::rewire(net5, each_edge(p = .2723, loops = F)) #15% chance of each edge being rewired
 net6
 ggraph(net6) +
   geom_edge_link(color = "black", alpha = 0.3) +
@@ -171,7 +175,7 @@ sm50[[1]]$NR #number recovered
 par(mfrow = c(1, 3))
 plot(sm501, comp = "NS", xlim = c(0, 2), ylim = c(0, 11)) #plotting all simulations at once, for susceptible
 plot(sm501, comp = "NI", xlim = c(0, 2), ylim = c(0, 11)) #plotting all simulations at once, for infected (default)
-plot(sm501, comp = "NR", xlim = c(0, 2), ylim = c(0, 11)) #plotting all simulations at once, for recovered
+
 ```
 
 ```{r}
@@ -258,7 +262,7 @@ sm50[[1]]$NR #number recovered
 par(mfrow = c(1, 3))
 plot(sm50, comp = "NS", xlim = c(0, 5), ylim = c(0, 11)) #plotting all simulations at once, for susceptible
 plot(sm50, comp = "NI", xlim = c(0, 5), ylim = c(0, 11)) #plotting all simulations at once, for infected (default)
-plot(sm50, comp = "NR", xlim = c(0, 5), ylim = c(0, 11)) #plotting all simulations at once, for recovered
+
 ```
 
 ```{r}
@@ -379,6 +383,29 @@ length(cfc) #how many communities
 sizes(cfc) #how many nodes in each community
 ```
 
+#### ERGM Model ####
+
+```{r}
+ net_sna <- network(edges, matrix.type = "edgelist", 
+                   directed = T, vertex.attr = nodes, loops = F, multiple = T)
+summary(net_sna)
+
+```
+
+
+```{r}
+
+model <- ergm(net_sna ~ edges +
+                nodematch("type.of.government") +
+                nodefactor("type.of.government") +
+                absdiff("GDP..USD.billion.") +
+                mutual) 
+
+summary(model) 
+
+```
+
+
 
 ### Extra Stuff ###
 
@@ -398,8 +425,8 @@ ggplot() +
   scale_x_continuous(limits = c(0, 10),
                      breaks = c(0, 5, 10),
                      expand = c(0, 0.01)) +
-  scale_y_continuous(limits = c(0, 15),
-                     breaks = c(0, 5, 10, 15),
+  scale_y_continuous(limits = c(0, 20),
+                     breaks = c(0, 5, 10, 20),
                      expand = c(0, 0)) +
   xlab("Resolution Parameter") +
   ylab("Num. Communities") +
