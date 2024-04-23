@@ -1,0 +1,514 @@
+---
+title: "FinalProject"
+author: "Group 14"
+date: "2024-04-11"
+output: html_document
+---
+
+```{r, echo=FALSE}
+#### packages####
+library(ergm)
+library(igraph)
+library(dplyr)
+library(magrittr)
+library(ggraph)
+library(sna)
+library(ggpubr)
+```
+
+```{r}
+#### load data####
+
+nodes <- read.csv("~/Desktop/GraduateSchool/S4/Network/FinalProj/GovNodes.csv")
+edges <- read.csv("~/Desktop/GraduateSchool/S4/Network/FinalProj/GovEges.csv")
+
+edges <- rename(edges, Relationship = "Relationship..which.includes.neutral.or.adversary.classifications.")
+
+set.seed(69420)
+
+```
+
+```{r}
+net <- graph_from_data_frame(edges, directed = F, vertices = nodes)
+net
+
+ggraph(net) +
+  geom_edge_link(color = "black", alpha = 0.3) +
+  geom_node_point(color = "black", fill = "#efd9d3", shape = 21) +
+  theme_graph()
+```
+
++ nodes
+```{r}
+net2 <- igraph::add_vertices(net, nv = 4) #add 4 vertices
+net2
+ggraph(net2) +
+  geom_edge_link(color = "black", alpha = 0.3) +
+  geom_node_point(color = "black", fill = "#efd9d3", shape = 21) +
+  theme_graph()
+```
+
++ edges
+```{r}
+net3 <- igraph::add_edges(net2, c(sample(V(net2), 4),sample(V(net2), 4))) #add edges, randomly
+net3
+# add_edges(net2, c(1,5, 10,12, 20,21, 50,54)) #connect pairs of nodes in sequence
+ggraph(net3) +
+  geom_edge_link(color = "black", alpha = 0.3) +
+  geom_node_point(color = "black", fill = "#efd9d3", shape = 21) +
+  theme_graph()
+```
+
+- edges
+```{r}
+net4 <- igraph::delete_edges(net3, c(sample(E(net3), 3))) #delete 3 edges from the list at random
+net4
+# delete_edges(net5, c(24, 56, 90, 102)) #delete edges, edge sequence
+ggraph(net4) +
+  geom_edge_link(color = "black", alpha = 0.3) +
+  geom_node_point(color = "black", fill = "#efd9d3", shape = 21) +
+  theme_graph()
+```
+
+- nodes
+```{r}
+net5 <- igraph::delete_vertices(net4, c(sample(length(nodes$ego_id), 3))) #delete nodes, randomly
+# delete_vertices(net4, c(1, 12, 24, 55)) #delete nodes, node sequence
+net5
+ggraph(net5) +
+  geom_edge_link(color = "black", alpha = 0.3) +
+  geom_node_point(color = "black", fill = "#efd9d3", shape = 21) +
+  theme_graph()
+```
+
+
+```{r}
+net6 <- igraph::rewire(net5, each_edge(p = .15, loops = F)) #15% chance of each edge being rewired
+net6
+ggraph(net6) +
+  geom_edge_link(color = "black", alpha = 0.3) +
+  geom_node_point(color = "black", fill = "#efd9d3", shape = 21) +
+  theme_graph()
+```
+
+Original network igrpah SIR Model
+
+```{r}
+
+net <- igraph::simplify(net)
+is.simple(net) 
+
+```
+
+```{r}
+
+sm50 <- sir(graph = net, beta = 5, gamma = 2) 
+class(sm50)
+
+sm50[[1]] #the first simulation
+sm50[[1]]$times #times of events
+sm50[[1]]$NS #number susceptible
+sm50[[1]]$NI #number infected
+sm50[[1]]$NR #number recovered
+# plot(sm50) #plotting all simulations at once, default measure (NI)
+par(mfrow = c(1, 3))
+plot(sm50, comp = "NS", xlim = c(0, 2), ylim = c(0, 11)) #plotting all simulations at once, for susceptible
+plot(sm50, comp = "NI", xlim = c(0, 2), ylim = c(0, 11)) #plotting all simulations at once, for infected (default)
+plot(sm50, comp = "NR", xlim = c(0, 2), ylim = c(0, 11)) #plotting all simulations at once, for recovered
+```
+
+```{r}
+sm50_sim1 <- sm50[[1]]
+names(sm50_sim1)
+class(sm50_sim1)
+
+list2env(setNames(sm50_sim1, paste0("df", seq_along(sm50_sim1))), envir = environment()) 
+# ...and recombined them into a new dataframe.
+df50 <- data.frame(df1, df2, df3, df4)
+# Unfortunately, in that process I lost the names of the variables, so I added them back.
+df50b <- df50 %>% 
+  dplyr::rename(times = df1,
+                NS = df2, 
+                NI = df3, 
+                NR = df4)
+```
+
+```{r}
+# Now I can plot like I prefer to.
+library(gplots)
+colorpanel(1, low = "#EFD9D3", high = "#57424A")
+require(ggplot2)
+b50_plot <- ggplot(df50b) +                    # basic graphical object
+  geom_line(aes(x = times, y = NS), colour="#EFD9D3") + #lightest
+  geom_line(aes(x = times, y = NI), colour="#A38E8F") + #medium
+  geom_line(aes(x = times, y = NR), colour="#57424A") + #dark
+  scale_x_continuous(limits = c(0,.5), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0,10), expand = c(0, 0)) +
+  xlab("time") + ylab("population") +
+  theme_classic()
+b50_plot
+
+```
+
+Manipulated Network SIR Model
+
+```{r}
+net6 <- igraph::simplify(net6)
+is.simple(net6) 
+```
+
+```{r}
+
+sm501 <- sir(graph = net6, beta = 10, gamma = 5) 
+class(sm501)
+
+sm50[[1]] #the first simulation
+sm50[[1]]$times #times of events
+sm50[[1]]$NS #number susceptible
+sm50[[1]]$NI #number infected
+sm50[[1]]$NR #number recovered
+# plot(sm50) #plotting all simulations at once, default measure (NI)
+par(mfrow = c(1, 3))
+plot(sm501, comp = "NS", xlim = c(0, 2), ylim = c(0, 11)) #plotting all simulations at once, for susceptible
+plot(sm501, comp = "NI", xlim = c(0, 2), ylim = c(0, 11)) #plotting all simulations at once, for infected (default)
+plot(sm501, comp = "NR", xlim = c(0, 2), ylim = c(0, 11)) #plotting all simulations at once, for recovered
+```
+
+```{r}
+sm501_sim1 <- sm501[[1]]
+names(sm501_sim1)
+class(sm501_sim1)
+# Then I unlisted that object into separate dataframes for each variable...
+# list2env(setNames(sm50_sim1, paste0("df", seq_along(sm50_sim1))), envir = parent.frame()) #use this if not in markdown file
+list2env(setNames(sm501_sim1, paste0("df", seq_along(sm501_sim1))), envir = environment()) 
+# ...and recombined them into a new dataframe.
+df501 <- data.frame(df1, df2, df3, df4)
+# Unfortunately, in that process I lost the names of the variables, so I added them back.
+df501b <- df501 %>% 
+  dplyr::rename(times = df1,
+                NS = df2, 
+                NI = df3, 
+                NR = df4)
+```
+
+```{r}
+# Now I can plot like I prefer to.
+library(gplots)
+colorpanel(1, low = "#EFD9D3", high = "#57424A")
+require(ggplot2)
+b501_plot <- ggplot(df501b) +                    # basic graphical object
+  geom_line(aes(x = times, y = NS), colour="#EFD9D3") + #lightest
+  geom_line(aes(x = times, y = NI), colour="#A38E8F") + #medium
+  geom_line(aes(x = times, y = NR), colour="#57424A") + #dark
+  scale_x_continuous(limits = c(0,.5), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0,10), expand = c(0, 0)) +
+  xlab("time") + ylab("population") +
+  theme_classic()
+b501_plot
+
+```
+
+
+
+# igraph SIR Model####
+If you want to plot the SIR model over an observed graph, 
+I think the most straightforward way to do that is the use the SIR function in igraph. 
+
+```{r}
+
+# Then we make a basic plot. 
+# I'm using the illustrative network I've been using throughout the term. 
+ggraph(net) +
+  geom_edge_link(color = "black", alpha = 0.3) +
+  geom_node_point(fill = "#efd9d3", color = "black", shape = 21) +
+  theme_graph()
+```
+
+```{r}
+# One snafu with the igraph function is that it requires the graph to be "simple". 
+# Simplified graphs do not have any loops or multiplex ties. 
+is.simple(net) 
+# Our graph is NOT simple, so we need to make it so. 
+net <- igraph::simplify(net)
+is.simple(net) 
+# The arguments in the igraph sir function are different than those in the EpiModel package.
+# Here, we set the rate of infection with the beta argument, and the rate of recovery is set by gamma.
+```
+
+```{r}
+# (More specifically, per the igraph documentation, beta is:
+# "The rate of infection of an individual 
+# that is susceptible and has a single infected neighbor. 
+# The infection rate of a susceptible individual with n infected neighbors is n times beta. 
+# Formally this is the rate parameter of an exponential distribution."
+# And gamma is: "The rate of recovery of an infected individual. 
+# Formally, this is the rate parameter of an exponential distribution.")
+sm50 <- sir(graph = net, beta = 2, gamma = 1) 
+class(sm50)
+# The object you get is not a dataframe, but an sir object. 
+# So we need to use some tricks to take a look at it.
+# The simplest approach is to use indexing. 
+# head(sm50) #whole object,  #this creates a VERY long list, so I'm not printing it
+sm50[[1]] #the first simulation
+sm50[[1]]$times #times of events
+sm50[[1]]$NS #number susceptible
+sm50[[1]]$NI #number infected
+sm50[[1]]$NR #number recovered
+# plot(sm50) #plotting all simulations at once, default measure (NI)
+par(mfrow = c(1, 3))
+plot(sm50, comp = "NS", xlim = c(0, 5), ylim = c(0, 11)) #plotting all simulations at once, for susceptible
+plot(sm50, comp = "NI", xlim = c(0, 5), ylim = c(0, 11)) #plotting all simulations at once, for infected (default)
+plot(sm50, comp = "NR", xlim = c(0, 5), ylim = c(0, 11)) #plotting all simulations at once, for recovered
+```
+
+```{r}
+# (There may be a better way to do this, but this is what I came up with.) 
+# Because I like to plot in ggplot, I needed to manipulate the list into a dataframe. 
+# I only wanted to look at the first simulation, so first I created an object of just sim1. 
+sm50_sim1 <- sm50[[1]]
+names(sm50_sim1)
+class(sm50_sim1)
+# Then I unlisted that object into separate dataframes for each variable...
+# list2env(setNames(sm50_sim1, paste0("df", seq_along(sm50_sim1))), envir = parent.frame()) #use this if not in markdown file
+list2env(setNames(sm50_sim1, paste0("df", seq_along(sm50_sim1))), envir = environment()) 
+# ...and recombined them into a new dataframe.
+df50 <- data.frame(df1, df2, df3, df4)
+# Unfortunately, in that process I lost the names of the variables, so I added them back.
+df50b <- df50 %>% 
+  dplyr::rename(times = df1,
+                NS = df2, 
+                NI = df3, 
+                NR = df4)
+```
+
+```{r}
+# Now I can plot like I prefer to.
+library(gplots)
+colorpanel(1, low = "#EFD9D3", high = "#57424A")
+require(ggplot2)
+b50_plot <- ggplot(df50b) +                    # basic graphical object
+  geom_line(aes(x = times, y = NS), colour="#EFD9D3") + #lightest
+  geom_line(aes(x = times, y = NI), colour="#A38E8F") + #medium
+  geom_line(aes(x = times, y = NR), colour="#57424A") + #dark
+  scale_x_continuous(limits = c(0,1), expand = c(0, 0)) +
+  scale_y_continuous(limits = c(0,10), expand = c(0, 0)) +
+  xlab("time") + ylab("population") +
+  theme_classic()
+b50_plot
+
+```
+
+### FInding Communities ###
+
+```{r}
+#### Create igraph and sna object and visualize the network####
+net <- graph_from_data_frame(edges, directed = T, vertices = nodes)
+net
+
+
+un_net <- graph_from_data_frame(edges, directed = F, vertices = nodes)
+un_net
+s_un_net <- simplify(un_net)
+s_un_net
+is_simple(s_un_net)
+
+
+net_sna <- network(edges, matrix.type = "edgelist", directed = T)
+net_sna
+```
+
+```{r}
+#### plot the graph ####
+
+ggraph(net) + 
+  geom_edge_link0(color = "black", alpha = .5) +
+  geom_node_point(fill = "#EFD9D3", color = "black",
+                  size = 3, shape = 21) +
+  ggnetwork::theme_blank()
+
+```
+
+
+```{r}
+## Leading Eigenvector####
+?cluster_leading_eigen
+
+cle <- cluster_leading_eigen(un_net) #for undirected graphs
+modularity(cle) 
+membership(cle) 
+length(cle)
+sizes(cle)
+```
+
+
+```{r}
+## Walktrap####
+?cluster_walktrap 
+
+cwt <- cluster_walktrap(net)
+modularity(cwt) 
+membership(cwt) 
+length(cwt)
+sizes(cwt)
+```
+This algorithm is best for this data becasue it is simple and undirected. The modlarity of .20 is strong
+
+```{r}
+# plot####
+colors <- colorpanel(length(cwt), low = "#efd9d3", high = "#57424a")
+ggraph(net) + 
+  geom_edge_link0(color = "black", alpha = .5) +
+  geom_node_point(aes(fill = as.factor(membership(cwt))),
+                  size = igraph::degree(net, mode = "all"), 
+                  color = "black", shape = 21) +
+  scale_fill_manual(values = c(colors)) +
+  ggnetwork::theme_blank() +
+  theme(legend.position = "none")
+```
+
+```{r}
+#### communities####
+## Fluid clusters####
+?cluster_fluid_communities 
+
+cfc <- cluster_fluid_communities(s_un_net, no.of.communities = 4) #need simple, undirected networks
+# specific the number of communities we want to find
+# modularity(cfc) #modularity/partition
+membership(cfc) #which community a node belongs to
+length(cfc) #how many communities
+sizes(cfc) #how many nodes in each community
+```
+
+
+### Extra Stuff ###
+
+```{r}
+# many and check number of communities####
+val <- seq(0, 1, 0.05) # create a sequence from 0 and 1 in increments of 0.05
+res <- 10^val # expand that to value between 1 and 10 for the resolutions
+num_com <- vector("numeric", length(res)) #create a numeric vector for each value in res
+for (i in 1:length(res)){
+  s_un_net[from=V(s_un_net), to=V(s_un_net)] <- res[i] #create self-loops for each value of res
+  clo <- cluster_optimal(s_un_net) #run this algorithm
+  num_com[i] <- length(clo) #take the number of communities from the detection and add to num_com
+}
+
+ggplot() +
+  geom_point(aes(x = res, y = num_com), color = "black", fill = "#DFE6EB", shape = 21) +
+  scale_x_continuous(limits = c(0, 10),
+                     breaks = c(0, 5, 10),
+                     expand = c(0, 0.01)) +
+  scale_y_continuous(limits = c(0, 15),
+                     breaks = c(0, 5, 10, 15),
+                     expand = c(0, 0)) +
+  xlab("Resolution Parameter") +
+  ylab("Num. Communities") +
+  theme_classic() #plot the number of communities by resolution
+
+num_com_table <- rbind(res, num_com)
+num_com_table #resolution and num communities
+max(num_com_table[2,]) #maximum number of communities
+num_com_table[,which(num_com_table[2,]==max(num_com_table[2,]))] #which resolutions gives the maximum number of communities
+```
+
+### Measuring the closeness properties of the netwrok ###
+
+
+```{r}
+
+net <- graph_from_data_frame(edges, directed = T, vertices = nodes)
+net
+
+```
+
+```{r}
+
+ggraph(net, layout = "kk") + 
+  geom_edge_link0(color = "black", alpha = .25) +
+  geom_node_point(fill = "#EFD9D3", color = "black",
+                  size = 3, shape = 21) +
+  ggnetwork::theme_blank()
+
+```
+
+```{r}
+
+#### closeness####
+close <- igraph::closeness(net) 
+close 
+summary(close)
+
+
+ggraph(net) + 
+  geom_edge_link0(color = "black", alpha = .5, 
+                  arrow = grid::arrow(angle = 20,
+                                      length = unit(0.10, "in"),
+                                      type = "closed")) +#, 
+  geom_node_point(fill = "#EFD9D3", color = "black", shape = 21, 
+                  size = igraph::closeness(net)*100) +
+  ggnetwork::theme_blank()
+
+```
+
+Closeness measures the average inverse distance between a node and all other nodes in the network. This means its path to each node is relatively long or short. IN my graph it shows I am the closest to the other nodes in the network. 
+
+```{r}
+
+#### betweenness####
+bet_d <- igraph::betweenness(net)
+summary(bet_d)
+
+bet_dF <- igraph::betweenness(net, directed = F)
+summary(bet_dF)
+
+
+ggraph(net) + 
+  geom_edge_link(color = "black", alpha = .5, 
+                  arrow = grid::arrow(angle = 20,
+                                      length = unit(0.10, "in"),
+                                      type = "closed")) +
+  geom_node_point(fill = "#EFD9D3", color = "black", shape = 21,
+                  size = igraph::betweenness(net)/15) +
+  ggnetwork::theme_blank()
+
+
+```
+
+Betweenness measures the number of times a node is on the shortest path between two other nodes. This means it is a bridge between two nodes in the network. Similarly, this shows I am the bridge between the most other nodes in the network. 
+
+```{r}
+#### degree####
+deg <- max(centralization.degree(net, mode = "all")$res)
+deg
+
+```
+
+
+```{r}
+# degree centralization####
+cent_deg <- centralization.degree(net, mode = "all")
+cent_deg
+
+```
+
+```{r}
+# betweenness centralization####
+cent_bet <- centralization.betweenness(net)
+cent_bet
+
+cent_bet2 <- max(centralization.betweenness(net)$res)
+cent_bet2
+
+```
+
+
+CINNA for fun
+```{r}
+library(CINNA)
+pr_cent <- proper_centralities(net)
+pr_cent
+calc_cent <- calculate_centralities(net) #takes a while to run
+calc_cent
+```
+
+

@@ -1,0 +1,18 @@
+ego_id,country,Year ,type of government,GDP (USD billion)
+1, United States Of America (U.S.A),1776,Democratic Republic,"$27,974"
+2,China,1949,Dictatorship,"$18,566"
+3,Germany,1871,Federal Democracy,"$4,730"
+4,Japan,1947,Parliamentary Democracy,"$4,291"
+5,India,1947,Parliamentary Democracy,"$4,112"
+6,United Kingdom (U.K.),1707,Parliamentary Democracy & constitutional momarchy ,"$3,592"
+7,France,1792,Parliamentary Democracy,"$3,182"
+8,Italy,1861,Democratic Republic,"$2,280"
+9,Brazil,1822,Democratic Republic,"$2,272"
+10,Canada,1867,Parliamentary Democracy,"$2,242"
+11,Mexico,1821,Federal Republic,"$1,992"
+12,Russia,1991,Federation,"$1,924"
+13,South Korea,1948,Democratic Republic,"$1,784"
+14,Austrialia ,1901,Representative Democracy & constitutional momarchy ,"$1,696"
+15,Spain ,1978,Parliamentary Monarchy,"$1,685"
+16,Saudi Arabia,1932,Monarchy,$1
+17,North Korea,1948,Dictatorship,$40
